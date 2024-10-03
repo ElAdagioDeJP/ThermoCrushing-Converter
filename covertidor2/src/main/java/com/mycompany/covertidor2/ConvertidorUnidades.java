@@ -10,6 +10,7 @@ import java.util.function.Function;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.ItemListener;
+import com.formdev.flatlaf.FlatLightLaf;
 
 public class ConvertidorUnidades {
 
@@ -21,6 +22,11 @@ public class ConvertidorUnidades {
     private static final DecimalFormat regularFormat = new DecimalFormat("0.#####");  // Formato normal
 
     public static void main(String[] args) {
+        try {
+            UIManager.setLookAndFeel(new FlatLightLaf());
+        } catch (UnsupportedLookAndFeelException e) {
+            e.printStackTrace();
+        }
         SwingUtilities.invokeLater(() -> {
             JFrame frame = new JFrame("Convertidor de Unidades");
             frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
@@ -28,7 +34,8 @@ public class ConvertidorUnidades {
             frame.setSize(400, 200);
             GridBagConstraints gbc = new GridBagConstraints();
             gbc.insets = new Insets(10, 10, 10, 10); // Margen entre componentes
-
+            frame.setLocationRelativeTo(frame);
+            frame.setMinimumSize(new Dimension(400, 200));
             // Selección de Categoría (Temperatura o Presión)
             String[] categorias = {"Temperatura", "Presión"};
             categoriaBox = new JComboBox<>(categorias);
