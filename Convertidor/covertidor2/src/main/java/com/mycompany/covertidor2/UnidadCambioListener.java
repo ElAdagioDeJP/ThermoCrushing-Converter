@@ -25,7 +25,7 @@ public class UnidadCambioListener implements ItemListener {
     public void itemStateChanged(ItemEvent e) {
         Predicate<Integer> esSeleccionado = state -> state == ItemEvent.SELECTED;
         Consumer<ItemEvent> ejecutarConversion = event -> {
-            ConvertidorUnidades.actualizarConversión(input1, input2, unidad1Box, unidad2Box);
+            ConvertidorUnidades.actualizarConversión(input1, input2, unidad1Box, unidad2Box, true);
             cambiarUnidadSiEsIgual(unidad1Box, unidad2Box);
         };
 

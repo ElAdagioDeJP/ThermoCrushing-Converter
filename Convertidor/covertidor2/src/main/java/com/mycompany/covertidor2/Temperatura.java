@@ -10,7 +10,7 @@ public class Temperatura extends Categoria {
 
     static {
         // Conversiones de Celsius a otras unidades
-        conversiones.put("Celsius a Fahrenheit", c -> c * 9/5 + 32);
+        conversiones.put("Celsius a Fahrenheit", c -> (c * 9/5) + 32);
         conversiones.put("Celsius a Kelvin", c -> c + 273.15);
 
         // Conversiones de Fahrenheit a otras unidades

@@ -7,6 +7,8 @@ import java.awt.*;
 import java.text.DecimalFormat;
 import java.util.*;
 import java.util.function.Function;
+import java.awt.event.FocusEvent;
+import java.awt.event.FocusListener;
 import java.awt.event.ItemEvent;
 import java.awt.event.ItemListener;
 
@@ -15,6 +17,7 @@ public class ConvertidorUnidades {
     private static Categoria categoriaActual;
     private static JComboBox<String> categoriaBox, unidad1Box, unidad2Box;
     private static JTextField input1, input2;
+    private static JLabel formulaLabel;
     private static boolean isUpdating = false;  // Flag para evitar ciclo infinito de eventos
     private static final DecimalFormat decimalFormat = new DecimalFormat("0.#####E0");  // Notación científica
     private static final DecimalFormat regularFormat = new DecimalFormat("0.#####");  // Formato normal
@@ -69,17 +72,22 @@ public class ConvertidorUnidades {
             gbc.gridx = 2;
             frame.add(panel2, gbc);
 
+            // Añadir JLabel para mostrar la fórmula
+            formulaLabel = new JLabel("Fórmula: ");
+            gbc.gridx = 0; gbc.gridy = 2; gbc.gridwidth = 3;
+            frame.add(formulaLabel, gbc);
+
             // Actualización sin if ni for
             DocumentListener convertir = new DocumentListener() {
-                public void changedUpdate(DocumentEvent e) { actualizarConversión(input1, input2, unidad1Box, unidad2Box); }
-                public void removeUpdate(DocumentEvent e) { actualizarConversión(input1, input2, unidad1Box, unidad2Box); }
-                public void insertUpdate(DocumentEvent e) { actualizarConversión(input1, input2, unidad1Box, unidad2Box); }
+                public void changedUpdate(DocumentEvent e) { actualizarConversión(input1, input2, unidad1Box, unidad2Box, false); }
+                public void removeUpdate(DocumentEvent e) { actualizarConversión(input1, input2, unidad1Box, unidad2Box, false); }
+                public void insertUpdate(DocumentEvent e) { actualizarConversión(input1, input2, unidad1Box, unidad2Box, false); }
             };
             
             DocumentListener invertirConversión = new DocumentListener() {
-                public void changedUpdate(DocumentEvent e) { actualizarConversión(input2, input1, unidad2Box, unidad1Box); }
-                public void removeUpdate(DocumentEvent e) { actualizarConversión(input2, input1, unidad2Box, unidad1Box); }
-                public void insertUpdate(DocumentEvent e) { actualizarConversión(input2, input1, unidad2Box, unidad1Box); }
+                public void changedUpdate(DocumentEvent e) { actualizarConversión(input2, input1, unidad2Box, unidad1Box, true); }
+                public void removeUpdate(DocumentEvent e) { actualizarConversión(input2, input1, unidad2Box, unidad1Box, true); }
+                public void insertUpdate(DocumentEvent e) { actualizarConversión(input2, input1, unidad2Box, unidad1Box, true); }
             };
 
             input1.getDocument().addDocumentListener(convertir);
@@ -92,7 +100,9 @@ public class ConvertidorUnidades {
                     Map<Integer, Runnable> acciones = new HashMap<>();
                     acciones.put(ItemEvent.SELECTED, () -> {
                         asegurarUnidadesDiferentes(e.getSource());
-                        actualizarConversión(input1, input2, unidad1Box, unidad2Box);
+                        actualizarConversión(input1, input2, unidad1Box, unidad2Box, false);
+                        actualizarConversión(input2, input1, unidad2Box, unidad1Box, true);
+                        actualizarFormula();
                     });
                 
                     Optional.ofNullable(acciones.get(e.getStateChange())).ifPresent(Runnable::run);
@@ -111,20 +121,39 @@ public class ConvertidorUnidades {
             // Inicializa con la categoría seleccionada
             actualizarCategoria(new Temperatura());
 
+            // Agregar FocusListener para limpiar letras al perder el foco
+            FocusListener limpiarLetrasListener = new FocusListener() {
+                @Override
+                public void focusGained(FocusEvent e) {
+                    // No hacer nada al ganar el foco
+                }
+
+                @Override
+                public void focusLost(FocusEvent e) {
+                    JTextField source = (JTextField) e.getSource();
+                    Optional.of(source.getText())
+                            .filter(texto -> texto.chars().anyMatch(Character::isLetter))
+                            .ifPresent(texto -> SwingUtilities.invokeLater(() -> source.setText("")));
+                }
+            };
+
+            input1.addFocusListener(limpiarLetrasListener);
+            input2.addFocusListener(limpiarLetrasListener);
+
             frame.setVisible(true);
         });
     }
 
-    public static void actualizarConversión(JTextField inputOrigen, JTextField inputDestino, JComboBox<String> unidadOrigenBox, JComboBox<String> unidadDestinoBox) {
+    public static void actualizarConversión(JTextField inputOrigen, JTextField inputDestino, JComboBox<String> unidadOrigenBox, JComboBox<String> unidadDestinoBox, boolean desdeSegundoInput) {
         Runnable actualizar = () -> {
             try {
                 String textoOrigen = inputOrigen.getText();
+                String unidadOrigen = (String) unidadOrigenBox.getSelectedItem();
+                String unidadDestino = (String) unidadDestinoBox.getSelectedItem();
                 Optional.of(textoOrigen)
                         .filter(texto -> !texto.isEmpty())
                         .map(Double::parseDouble)
                         .ifPresentOrElse(valorOrigen -> {
-                            String unidadOrigen = (String) unidadOrigenBox.getSelectedItem();
-                            String unidadDestino = (String) unidadDestinoBox.getSelectedItem();
                             Function<Double, Double> conversion = Optional.ofNullable(categoriaActual.obtenerConversion(unidadOrigen, unidadDestino))
                                     .orElseThrow(() -> new IllegalArgumentException("Conversión no soportada: " + unidadOrigen + " a " + unidadDestino));
                             double valorConvertido = conversion.apply(valorOrigen);
@@ -133,9 +162,13 @@ public class ConvertidorUnidades {
                                     .map(decimalFormat::format)
                                     .orElseGet(() -> regularFormat.format(valorConvertido));
                             inputDestino.setText(valorFormateado);
-                        }, () -> inputDestino.setText(""));
+                            actualizarFormula(valorOrigen, valorConvertido, unidadOrigen, unidadDestino, desdeSegundoInput);
+                        }, () -> {
+                            inputDestino.setText("");
+                            actualizarFormula(0, 0, unidadOrigen, unidadDestino, desdeSegundoInput);
+                        });
             } catch (NullPointerException | IllegalArgumentException e) {
-                
+                // Manejo de excepciones
             } finally {
                 isUpdating = false;  // Libera el bloqueo
             }
@@ -162,6 +195,7 @@ public class ConvertidorUnidades {
 
         // Asegurar que las unidades sean diferentes
         asegurarUnidadesDiferentes(unidad1Box);
+        actualizarFormula();
     }
 
     private static void asegurarUnidadesDiferentes(Object source) {
@@ -169,23 +203,78 @@ public class ConvertidorUnidades {
         acciones.put(unidad1Box, () -> {
             String unidad1 = (String) unidad1Box.getSelectedItem();
             String unidad2 = (String) unidad2Box.getSelectedItem();
-            unidad1Box.setSelectedIndex(
-                unidad1 != null && unidad1.equals(unidad2) && source == unidad1Box
-                    ? (unidad1Box.getSelectedIndex() + 1) % unidad1Box.getItemCount()
-                    : unidad1Box.getSelectedIndex()
-            );
+            Optional.ofNullable(unidad1)
+                    .filter(u -> u.equals(unidad2) && source == unidad1Box)
+                    .ifPresent(u -> unidad1Box.setSelectedIndex((unidad1Box.getSelectedIndex() + 1) % unidad1Box.getItemCount()));
         });
         acciones.put(unidad2Box, () -> {
             String unidad1 = (String) unidad1Box.getSelectedItem();
             String unidad2 = (String) unidad2Box.getSelectedItem();
-            unidad2Box.setSelectedIndex(
-                unidad2 != null && unidad2.equals(unidad1) && source == unidad2Box
-                    ? (unidad2Box.getSelectedIndex() + 1) % unidad2Box.getItemCount()
-                    : unidad2Box.getSelectedIndex()
-            );
+            Optional.ofNullable(unidad2)
+                    .filter(u -> u.equals(unidad1) && source == unidad2Box)
+                    .ifPresent(u -> unidad2Box.setSelectedIndex((unidad2Box.getSelectedIndex() + 1) % unidad2Box.getItemCount()));
         });
 
         Optional.ofNullable(acciones.get(source)).ifPresent(Runnable::run);
     }
+
+    private static void actualizarFormula() {
+        String unidadOrigen = (String) unidad1Box.getSelectedItem();
+        String unidadDestino = (String) unidad2Box.getSelectedItem();
+        Optional.ofNullable(unidadOrigen)
+                .flatMap(u1 -> Optional.ofNullable(unidadDestino)
+                        .map(u2 -> u1 + "-" + u2))
+                .ifPresent(key -> {
+                    Map<String, String> formulas = new HashMap<>();
+                    formulas.put("Celsius-Fahrenheit", "(%s °C × 9/5) + 32 = %s °F");
+                    formulas.put("Fahrenheit-Celsius", "(%s °F − 32) × 5/9 = %s °C");
+                    formulas.put("Kelvin-Celsius", "%s K − 273.15 = %s °C");
+                    formulas.put("Celsius-Kelvin", "%s °C + 273.15 = %s K");
+                    formulas.put("Kelvin-Fahrenheit", "(%s K − 273.15) × 9/5 + 32 = %s °F");
+                    formulas.put("Fahrenheit-Kelvin", "(%s °F − 32) × 5/9 + 273.15 = %s K");
+
+                    formulas.put("Atmósfera-Bar", "Para obtener un resultado aproximado, multiplica el valor de presión por 1,013");
+                    formulas.put("Atmósfera-PSI", "Multiplicar el valor de presión por 14,696");
+                    formulas.put("Atmósfera-Pascales", "Para obtener un resultado aproximado, multiplica el valor de presión por 101300");
+                    formulas.put("Atmósfera-Torr", "Multiplicar el valor de presión por 760");
+                    formulas.put("Bar-Atmósfera", "Para obtener un resultado aproximado, divide el valor de presión entre 1,013");
+                    formulas.put("Bar-PSI", "Para obtener un resultado aproximado, multiplica el valor de presión por 14,504");
+                    formulas.put("Bar-Pascales", "Multiplicar el valor de presión por 100000");
+                    formulas.put("Bar-Torr", "Para obtener un resultado aproximado, multiplica el valor de presión por 750,1");
+                    formulas.put("Pascales-Atmósfera", "Para obtener un resultado aproximado, divide el valor de presión entre 101300");
+                    formulas.put("Pascales-Bar", "Divide el valor de presión entre 100000");
+                    formulas.put("Pascales-PSI", "Para obtener un resultado aproximado, divide el valor de presión entre 6895");
+                    formulas.put("Pascales-Torr", "Para obtener un resultado aproximado, divide el valor de presión entre 133,3");
+                    formulas.put("PSI-Atmósfera", "Divide el valor de presión entre 14,696");
+                    formulas.put("PSI-Bar", "Para obtener un resultado aproximado, divide el valor de presión entre 14,504");
+                    formulas.put("PSI-Pascales", "Para obtener un resultado aproximado, multiplica el valor de presión por 6895");
+                    formulas.put("PSI-Torr", "Multiplicar el valor de presión por 51,715");
+                    formulas.put("Torr-Atmósfera", "Divide el valor de presión entre 760");
+                    formulas.put("Torr-Bar", "Para obtener un resultado aproximado, divide el valor de presión entre 750,1");
+                    formulas.put("Torr-Pascales", "Divide el valor de presión entre 51,715");
+                    formulas.put("Torr-PSI", "Para obtener un resultado aproximado, multiplica el valor de presión por 133,3");
+
+                    Optional.ofNullable(formulas.get(key))
+                            .map(formulaTemplate -> String.format(formulaTemplate, input1.getText(), input2.getText()))
+                            .ifPresent(formula -> formulaLabel.setText("Fórmula: " + formula));
+                });
+    }
+
+    private static void actualizarFormula(double valorOrigen, double valorConvertido, String unidadOrigen, String unidadDestino, boolean desdeSegundoInput) {
+        Map<String, String> formulas = new HashMap<>();
+        formulas.put("Celsius-Fahrenheit", desdeSegundoInput ? "(%s °F − 32) × 5/9 = %s °C" : "(%s °C × 9/5) + 32 = %s °F");
+        formulas.put("Fahrenheit-Celsius", desdeSegundoInput ? "(%s °C × 9/5) + 32 = %s °F" : "(%s °F − 32) × 5/9 = %s °C");
+        formulas.put("Kelvin-Celsius", desdeSegundoInput ? "%s °C + 273.15 = %s K" : "%s K − 273.15 = %s °C");
+        formulas.put("Celsius-Kelvin", desdeSegundoInput ? "%s K − 273.15 = %s °C" : "%s °C + 273.15 = %s K");
+        formulas.put("Kelvin-Fahrenheit", desdeSegundoInput ? "(%s °F − 32) × 5/9 + 273.15 = %s K" : "(%s K − 273.15) × 9/5 + 32 = %s °F");
+        formulas.put("Fahrenheit-Kelvin", desdeSegundoInput ? "(%s K − 273.15) × 9/5 + 32 = %s °F" : "(%s °F − 32) × 5/9 + 273.15 = %s K");
+    
+        String key = unidadOrigen + "-" + unidadDestino;
+        String formulaTemplate = Optional.ofNullable(formulas.get(key))
+                                         .orElseThrow(() -> new IllegalArgumentException("Conversión no soportada: " + unidadOrigen + " a " + unidadDestino));
+        String formula = String.format(formulaTemplate, valorConvertido, valorOrigen);
+        formulaLabel.setText("Fórmula: " + formula);
+    }
+
+    
 }
-//probando
