@@ -1,3 +1,4 @@
+
 package com.mycompany.covertidor2;
 import java.awt.*;
 import java.text.DecimalFormat;
@@ -45,6 +46,7 @@ public class ConvertidorUnidades {
             panel1.add(input1, gbcPanel1);
             gbcPanel1.gridy = 1;
             unidad1Box = new JComboBox<>();
+            input1.setPreferredSize(new Dimension(13, 20));
             panel1.add(unidad1Box, gbcPanel1);
 
             // Panel para el segundo conjunto de input y unidad
@@ -65,7 +67,7 @@ public class ConvertidorUnidades {
             // Añadimos el símbolo "=" entre los JTextField
             JLabel equalsLabel = new JLabel("=");
             equalsLabel.setFont(new Font("Arial", Font.BOLD, 24)); // Aumentar el tamaño de la fuente
-            gbc.gridx = 1; gbc.gridy = 1; gbc.gridheight = 1;
+            gbc.gridx = 1; gbc.gridy = 1; gbc.gridheight = 1;gbc.gridwidth = 1;
             frame.add(equalsLabel, gbc);
 
             gbc.gridx = 2;
@@ -74,6 +76,7 @@ public class ConvertidorUnidades {
             // Añadir JLabel para mostrar la fórmula
             formulaLabel = new JLabel("Fórmula: ");
             gbc.gridx = 0; gbc.gridy = 2; gbc.gridwidth = 3;
+            formulaLabel.setPreferredSize(new Dimension(279, 50));
             frame.add(formulaLabel, gbc);
 
             // Actualización sin if ni for
