@@ -1,8 +1,4 @@
 package com.mycompany.covertidor2;
-
-import javax.swing.*;
-import javax.swing.event.DocumentEvent;
-import javax.swing.event.DocumentListener;
 import java.awt.*;
 import java.text.DecimalFormat;
 import java.util.*;
@@ -11,6 +7,9 @@ import java.awt.event.FocusEvent;
 import java.awt.event.FocusListener;
 import java.awt.event.ItemEvent;
 import java.awt.event.ItemListener;
+import javax.swing.*;
+import javax.swing.event.DocumentEvent;
+import javax.swing.event.DocumentListener;
 
 public class ConvertidorUnidades {
 
@@ -19,15 +18,15 @@ public class ConvertidorUnidades {
     private static JTextField input1, input2;
     private static JLabel formulaLabel;
     private static boolean isUpdating = false;  // Flag para evitar ciclo infinito de eventos
-    private static final DecimalFormat decimalFormat = new DecimalFormat("0.#####E0");  // Notación científica
-    private static final DecimalFormat regularFormat = new DecimalFormat("0.#####");  // Formato normal
+    private static final DecimalFormat decimalFormat = new DecimalFormat("0.####E0");  // Notación científica
+    private static final DecimalFormat twoDecimalFormat = new DecimalFormat("0.##");  // Formato con dos decimales
 
     public static void main(String[] args) {
         SwingUtilities.invokeLater(() -> {
             JFrame frame = new JFrame("Convertidor de Unidades");
             frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
             frame.setLayout(new GridBagLayout()); // Usamos GridBagLayout para una interfaz mejor organizada
-            frame.setSize(400, 300);
+            frame.setSize(500, 300);
             GridBagConstraints gbc = new GridBagConstraints();
             gbc.insets = new Insets(10, 10, 10, 10); // Margen entre componentes
 
@@ -157,10 +156,15 @@ public class ConvertidorUnidades {
                             Function<Double, Double> conversion = Optional.ofNullable(categoriaActual.obtenerConversion(unidadOrigen, unidadDestino))
                                     .orElseThrow(() -> new IllegalArgumentException("Conversión no soportada: " + unidadOrigen + " a " + unidadDestino));
                             double valorConvertido = conversion.apply(valorOrigen);
-                            String valorFormateado = Optional.of(valorConvertido)
-                                    .filter(valor -> valor >= 1e6 || valor < 1e-6)
-                                    .map(decimalFormat::format)
-                                    .orElseGet(() -> regularFormat.format(valorConvertido));
+
+                            Map<Boolean, String> formatos = new HashMap<>();
+                            formatos.put(true, decimalFormat.format(valorConvertido));
+                            formatos.put(false, twoDecimalFormat.format(valorConvertido));
+
+                            String valorFormateado = Optional.of(textoOrigen.length() >= 21)
+                                                             .map(formatos::get)
+                                                             .orElse(twoDecimalFormat.format(valorConvertido));
+
                             inputDestino.setText(valorFormateado);
                             actualizarFormula(valorOrigen, valorConvertido, unidadOrigen, unidadDestino, desdeSegundoInput);
                         }, () -> {
@@ -233,26 +237,26 @@ public class ConvertidorUnidades {
                     formulas.put("Kelvin-Fahrenheit", "(%s K − 273.15) × 9/5 + 32 = %s °F");
                     formulas.put("Fahrenheit-Kelvin", "(%s °F − 32) × 5/9 + 273.15 = %s K");
 
-                    formulas.put("Atmósfera-Bar", "Para obtener un resultado aproximado, multiplica el valor de presión por 1,013");
+                    formulas.put("Atmósfera-Bar", "multiplica el valor de presión por 1,013");
                     formulas.put("Atmósfera-PSI", "Multiplicar el valor de presión por 14,696");
-                    formulas.put("Atmósfera-Pascales", "Para obtener un resultado aproximado, multiplica el valor de presión por 101300");
+                    formulas.put("Atmósfera-Pascales", "multiplica el valor de presión por 101300");
                     formulas.put("Atmósfera-Torr", "Multiplicar el valor de presión por 760");
-                    formulas.put("Bar-Atmósfera", "Para obtener un resultado aproximado, divide el valor de presión entre 1,013");
-                    formulas.put("Bar-PSI", "Para obtener un resultado aproximado, multiplica el valor de presión por 14,504");
+                    formulas.put("Bar-Atmósfera", "divide el valor de presión entre 1,013");
+                    formulas.put("Bar-PSI", "multiplica el valor de presión por 14,504");
                     formulas.put("Bar-Pascales", "Multiplicar el valor de presión por 100000");
-                    formulas.put("Bar-Torr", "Para obtener un resultado aproximado, multiplica el valor de presión por 750,1");
-                    formulas.put("Pascales-Atmósfera", "Para obtener un resultado aproximado, divide el valor de presión entre 101300");
+                    formulas.put("Bar-Torr", "multiplica el valor de presión por 750,1");
+                    formulas.put("Pascales-Atmósfera", " divide el valor de presión entre 101300");
                     formulas.put("Pascales-Bar", "Divide el valor de presión entre 100000");
-                    formulas.put("Pascales-PSI", "Para obtener un resultado aproximado, divide el valor de presión entre 6895");
-                    formulas.put("Pascales-Torr", "Para obtener un resultado aproximado, divide el valor de presión entre 133,3");
+                    formulas.put("Pascales-PSI", " divide el valor de presión entre 6895");
+                    formulas.put("Pascales-Torr", " divide el valor de presión entre 133,3");
                     formulas.put("PSI-Atmósfera", "Divide el valor de presión entre 14,696");
-                    formulas.put("PSI-Bar", "Para obtener un resultado aproximado, divide el valor de presión entre 14,504");
-                    formulas.put("PSI-Pascales", "Para obtener un resultado aproximado, multiplica el valor de presión por 6895");
+                    formulas.put("PSI-Bar", "divide el valor de presión entre 14,504");
+                    formulas.put("PSI-Pascales", "multiplica el valor de presión por 6895");
                     formulas.put("PSI-Torr", "Multiplicar el valor de presión por 51,715");
                     formulas.put("Torr-Atmósfera", "Divide el valor de presión entre 760");
-                    formulas.put("Torr-Bar", "Para obtener un resultado aproximado, divide el valor de presión entre 750,1");
+                    formulas.put("Torr-Bar", "divide el valor de presión entre 750,1");
                     formulas.put("Torr-Pascales", "Divide el valor de presión entre 51,715");
-                    formulas.put("Torr-PSI", "Para obtener un resultado aproximado, multiplica el valor de presión por 133,3");
+                    formulas.put("Torr-PSI", "multiplica el valor de presión por 133,3");
 
                     Optional.ofNullable(formulas.get(key))
                             .map(formulaTemplate -> String.format(formulaTemplate, input1.getText(), input2.getText()))
@@ -272,9 +276,16 @@ public class ConvertidorUnidades {
         String key = unidadOrigen + "-" + unidadDestino;
         String formulaTemplate = Optional.ofNullable(formulas.get(key))
                                          .orElseThrow(() -> new IllegalArgumentException("Conversión no soportada: " + unidadOrigen + " a " + unidadDestino));
-        String formula = String.format(formulaTemplate, valorConvertido, valorOrigen);
+        
+        // Formatear los valores
+        String valorOrigenFormateado = (String.valueOf(valorOrigen).length() >= 9) ? decimalFormat.format(valorOrigen) : twoDecimalFormat.format(valorOrigen);
+        String valorConvertidoFormateado = (String.valueOf(valorConvertido).length() >= 9) ? decimalFormat.format(valorConvertido) : twoDecimalFormat.format(valorConvertido);
+        
+        // Ajustar la fórmula dependiendo del campo de entrada
+        String formula = desdeSegundoInput 
+            ? String.format(formulaTemplate, valorConvertidoFormateado, valorOrigenFormateado)
+            : String.format(formulaTemplate, valorOrigenFormateado, valorConvertidoFormateado);
+        
         formulaLabel.setText("Fórmula: " + formula);
     }
-
-    
 }
