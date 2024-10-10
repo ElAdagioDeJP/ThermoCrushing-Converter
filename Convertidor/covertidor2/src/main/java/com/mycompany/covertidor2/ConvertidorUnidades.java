@@ -108,6 +108,15 @@ public class ConvertidorUnidades {
             gbc.gridwidth = 3;
             frame.add(formulaLabel, gbc);
 
+            categoriaBox.addItemListener(e -> {
+                Optional.of(e)
+                    .filter(event -> event.getStateChange() == ItemEvent.SELECTED)
+                    .ifPresent(event -> limpiarInputs());
+
+            });
+
+            
+
             DocumentListener convertir = new DocumentListener() {
                 public void changedUpdate(DocumentEvent e) {
                     actualizarConversión(input1, input2, unidad1Box, unidad2Box, false);
@@ -135,6 +144,8 @@ public class ConvertidorUnidades {
                     actualizarConversión(input2, input1, unidad2Box, unidad1Box, true);
                 }
             };
+
+           
 
             input1.getDocument().addDocumentListener(convertir);
             input2.getDocument().addDocumentListener(invertirConversión);
@@ -165,6 +176,13 @@ public class ConvertidorUnidades {
 
             KeyListener limpiarLetrasKeyListener = new KeyAdapter() {
                 @Override
+                public void keyTyped(KeyEvent e) {
+                    Optional.of(e.getKeyChar())
+                        .filter(c -> c == 'e' || c == 'E')
+                        .ifPresent(c -> e.consume());
+                }
+            
+                @Override
                 public void keyReleased(KeyEvent e) {
                     limpiarLetras(input1, input2);
                 }
@@ -189,7 +207,7 @@ public class ConvertidorUnidades {
         });
     }
 
-    private static void limpiarInputs() {
+      private static void limpiarInputs() {
         input1.setText("");
         input2.setText("");
     }
@@ -311,9 +329,9 @@ public class ConvertidorUnidades {
                 && unidadesTemperatura.contains(unidadDestino);
         boolean esPresion = unidadesPresion.contains(unidadOrigen) && unidadesPresion.contains(unidadDestino);
 
-        return (esTemperatura && (valor.abs().compareTo(new BigDecimal("1e20")) >= 0 || valor.precision() >= 20
-                || valor.precision() < 7)) ||
-                (esPresion && (valor.abs().compareTo(new BigDecimal("1e20")) >= 0 || valor.precision() >= 20
+        return (esTemperatura && (valor.abs().compareTo(new BigDecimal("1e20")) >= 0 || valor.precision() >= 21
+                || valor.precision() < -7)) ||
+                (esPresion && (valor.abs().compareTo(new BigDecimal("1e26")) >= 0 || valor.precision() >= 26
                         || valor.precision() < 7));
     }
 
