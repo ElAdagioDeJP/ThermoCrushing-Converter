@@ -256,7 +256,7 @@ private static DecimalFormat obtenerFormato(String unidadOrigen, String unidadDe
 
     boolean esPresion = unidadesPresion.contains(unidadOrigen) && unidadesPresion.contains(unidadDestino);
     decimalFormat.setMaximumFractionDigits(esPresion ? 6 : 4); // Mostrar hasta 6 dígitos decimales para presión, 4 para otros
-    decimalFormat.setMinimumFractionDigits(esPresion ? 0 : 3); // Mostrar al menos 0 dígitos decimales para presión, 3 para otros
+    decimalFormat.setMinimumFractionDigits(esPresion ? 3 : 3); // Mostrar al menos 0 dígitos decimales para presión, 3 para otros
     
     decimalFormat.setGroupingUsed(false); // No usar separadores de miles
     return decimalFormat;
@@ -265,11 +265,11 @@ private static boolean usarNotacionCientifica(String unidadOrigen, String unidad
     Set<String> unidadesTemperatura = Set.of("Celsius", "Fahrenheit", "Kelvin");
     Set<String> unidadesPresion = Set.of("Atmósfera", "Bar", "PSI", "Pascales", "Torr");
 
-    return unidadesTemperatura.contains(unidadOrigen) && unidadesTemperatura.contains(unidadDestino)
-        ? valor.abs().compareTo(new BigDecimal("1e20")) >= 0
-        : unidadesPresion.contains(unidadOrigen) && unidadesPresion.contains(unidadDestino)
-            ? valor.abs().compareTo(new BigDecimal("1e20")) >= 0
-            : false;
+    boolean esTemperatura = unidadesTemperatura.contains(unidadOrigen) && unidadesTemperatura.contains(unidadDestino);
+    boolean esPresion = unidadesPresion.contains(unidadOrigen) && unidadesPresion.contains(unidadDestino);
+
+    return (esTemperatura && (valor.abs().compareTo(new BigDecimal("1e20")) >= 0 || valor.precision() >= 20 || valor.precision() < 7)) ||
+           (esPresion && (valor.abs().compareTo(new BigDecimal("1e20")) >= 0 || valor.precision() >= 20 || valor.precision() < 7));
 }
     // Actualiza la categoría actual y las unidades en los JComboBox usando un enfoque sin `if` ni `for`
     private static void actualizarCategoria(Categoria nuevaCategoria) {
