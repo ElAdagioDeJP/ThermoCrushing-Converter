@@ -15,6 +15,7 @@ import java.awt.event.KeyListener;
 import java.awt.event.KeyEvent;
 import java.math.BigDecimal;
 import com.formdev.flatlaf.FlatLightLaf;
+import javax.swing.text.*;
 
 public class ConvertidorUnidades {
 
@@ -26,7 +27,19 @@ public class ConvertidorUnidades {
     private static int previus1selected = 0;
     private static int previus2selected = 1;
     private static boolean isInitialized = false;
-
+    public class NoSpaceFilter extends DocumentFilter {
+        @Override
+        public void insertString(FilterBypass fb, int offset, String string, AttributeSet attr) throws BadLocationException {
+            String filteredString = string.replaceAll("\\s+", "");
+            fb.insertString(offset, filteredString, attr);
+        }
+    
+        @Override
+        public void replace(FilterBypass fb, int offset, int length, String text, AttributeSet attrs) throws BadLocationException {
+            String filteredText = text.replaceAll("\\s+", "");
+            fb.replace(offset, length, filteredText, attrs);
+        }
+    }
     public static void main(String[] args) {
         try {
             UIManager.setLookAndFeel(new FlatLightLaf());
@@ -107,6 +120,7 @@ public class ConvertidorUnidades {
             gbc.gridy = 2;
             gbc.gridwidth = 3;
             frame.add(formulaLabel, gbc);
+            // Añadir el filtro NoSpaceFilter a input1 y input
 
             categoriaBox.addItemListener(e -> {
                 Optional.of(e)
@@ -114,7 +128,7 @@ public class ConvertidorUnidades {
                     .ifPresent(event -> limpiarInputs());
 
             });
-
+            
             
 
             DocumentListener convertir = new DocumentListener() {
@@ -178,7 +192,7 @@ public class ConvertidorUnidades {
                 @Override
                 public void keyTyped(KeyEvent e) {
                     Optional.of(e.getKeyChar())
-                        .filter(c -> c == 'e' || c == 'E')
+                        .filter(c -> c == 'e' || c == 'E' || c == ' ')
                         .ifPresent(c -> e.consume());
                 }
             
@@ -211,6 +225,7 @@ public class ConvertidorUnidades {
         input1.setText("");
         input2.setText("");
     }
+    
 
     // Cambiar el tipo de datos en la función actualizarConversión
     public static void actualizarConversión(JTextField inputOrigen, JTextField inputDestino,
@@ -261,6 +276,7 @@ public class ConvertidorUnidades {
                     actualizar.run();
                 });
     }
+    
 
     // Cambiar el tipo de datos en la función actualizarFormula
     private static void actualizarFormula(BigDecimal valorOrigen, BigDecimal valorConvertido, String unidadOrigen,
